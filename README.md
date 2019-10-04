@@ -100,28 +100,33 @@ func TestRunCallbacks(t *testing.T) {
     t.Errorf("An error from before update callbacks happened when update with invalid value")
   }
   
-  if DB.Where().Error != nil {
+  if DB.Where("code = ?", "update_callback").First(&Product{}).Error != nil {
+    t.Errorf("Record Should not be updated due to errors happended in before update callback")
   }
   
-  if DB.Where().Error == nil {
+  if DB.Where("code = ?", "dont_update").First(&Product{}).Error == nil {
+    t.Errorf("Record Should not be updated due to errors happened when update with invalid value")
   }
   
   p2.Code = "dont_save"
   if DB.Save(&p2).Error == nil {
+    t.Errorf("An error from before save callbacks hppened when update with invalid value")
   }
   
   p3 := Product{Code: "dont_delete", Price: 100}
   DB.Save(&p3)
   if DB.Delete(&p3).Error == nil {
-    t.Errorf("")
+    t.Errorf("An error from before delete callbacks happend when delete")
   }
   
   if DB.Where("Code = ?", "dont_delete").First(&p3).Error != nil {
+    t.Errorf("An error from before delte callbacks happened")
   }
   
   p4 := Product{Code: "after_save_error", Price: 100}
   DB.Save(&p4)
   if err := DB.First(&Product{}, "code = ?", "after_save_error").Error; err == nil {
+    t.Errorf("Record should e reverted if get an error in after save callback")
   }
   
   p5 := Product{Code: "after_delte_error", Price: 100}
