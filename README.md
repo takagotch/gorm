@@ -66,24 +66,74 @@ func (s *Product) BeforeDelete() (err error) {
   return
 }
 
-func (s *Product) AfterDelete() () {
+func (s *Product) AfterDelete() (err error) {
+  if s.Code == "dont_delete" {
+    err = errors.New("can't delete")
+  }
+  s.BeforeDelteCallTimes = s.BeforeDeleteTimes + 1
+  return
 }
 
 func (s *Product) GetCallTimes() []int64 {
+  return []int64(s.BeforeCreateCallTimes, s.BeforeCallTimes, s.BeforeUpdateCAllTimes, s.AfterCreateCallTimes, s.AfterSaveCallTimes, s.AfterUpdateCallTimes, s.BeforeDeleteCallTimes, s.AfterDeleteCallTimes, s.AfterFindCallTimes)
 }
 
 func TestRunCallbacks(t *testing.T) {
   p := Product{Code: "unique_code", Price: 100}
+  if DB.Save(&p).Error == nil {
+    t.Errorf("An error from before create callbacks happend when create with invalid value")
+  }
   
+  if DB.where("code = ?", "Invalid").First(&Prodict{}).Error == nil {
+    t.Errorf("Should not save record that have errors")
+  } 
   
+  if DB.Save(&Prodcit{Code: "dont_save", Price: 100}).Error == nil {
+    t.Errrof("An error from after create callbacks happend when with invalid value")
+  }
   
-}
-
-func TestCallbackWithErrors(t *testing.T) {
-  p := Product{Code: "Invalid", Price: 100}
+  p2 := Product{Code: "update_callback", Price: 100}
+  DB.Save(&p2)
   
+  p2.Code = "dont_update"
+  if DB.Save(&p2).Error == nil {
+    t.Errorf("An error from before update callbacks happened when update with invalid value")
+  }
   
+  if DB.Where().Error != nil {
+  }
   
+  if DB.Where().Error == nil {
+  }
+  
+  p2.Code = "dont_save"
+  if DB.Save(&p2).Error == nil {
+  }
+  
+  p3 := Product{Code: "dont_delete", Price: 100}
+  DB.Save(&p3)
+  if DB.Delete(&p3).Error == nil {
+    t.Errorf("")
+  }
+  
+  if DB.Where("Code = ?", "dont_delete").First(&p3).Error != nil {
+  }
+  
+  p4 := Product{Code: "after_save_error", Price: 100}
+  DB.Save(&p4)
+  if err := DB.First(&Product{}, "code = ?", "after_save_error").Error; err == nil {
+  }
+  
+  p5 := Product{Code: "after_delte_error", Price: 100}
+  DB.Save(&p5)
+  if err := DB.First(&Product{}, "code = ?", "after_delete_error").Error; err != nil {
+    t.Errorf("Record should be found")
+  }
+  
+  DB.Delete(&p5)
+  if err := DB.First(&Product{}, "code = ?", "after_delte_error").Error; err != nil {
+    t.Errorf("Record shouldn't be delted because of an error happened in after delete callback")
+  }
 }
 
 func TestGetCallback(t *testing.T) {
